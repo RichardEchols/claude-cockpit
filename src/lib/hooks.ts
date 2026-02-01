@@ -292,12 +292,18 @@ function setCachedAuth(authenticated: boolean) {
 }
 
 export function useAuth() {
-  const cached = getCachedAuth()
-  const [authenticated, setAuthenticated] = useState(cached?.authenticated ?? false)
-  const [loading, setLoading] = useState(!cached?.authenticated)
+  const [authenticated, setAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verify auth in background — if cached, we already show authenticated
+    // Check localStorage cache first for instant auth
+    const cached = getCachedAuth()
+    if (cached?.authenticated) {
+      setAuthenticated(true)
+      setLoading(false)
+    }
+
+    // Then verify with server
     fetch('/api/projects', { credentials: 'include' })
       .then(res => {
         setAuthenticated(res.ok)
@@ -305,15 +311,13 @@ export function useAuth() {
         setLoading(false)
       })
       .catch(() => {
-        // Network error — don't un-authenticate if we had cached auth
-        // (server might be temporarily unreachable)
         if (!cached?.authenticated) {
           setAuthenticated(false)
           setCachedAuth(false)
         }
         setLoading(false)
       })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   const login = useCallback(async (pin: string): Promise<boolean> => {
     try {
