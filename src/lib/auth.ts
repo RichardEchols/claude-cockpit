@@ -1,35 +1,33 @@
-import { randomBytes } from 'crypto'
+import { createHmac } from 'crypto'
 import { cookies } from 'next/headers'
 import { PROJECTS } from './constants'
 
 const TOKEN_COOKIE = 'cockpit-token'
-const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
-
-export function generateToken(): string {
-  return randomBytes(32).toString('hex')
-}
-
-// Stored in memory on the server (resets on restart)
-const validTokens = new Map<string, number>()
+const SECRET = process.env.COCKPIT_SECRET || 'kiyomi-default-secret-change-me'
 
 export function createAuthToken(pin: string): string | null {
   const correctPin = process.env.COCKPIT_PIN || '0000'
   if (pin !== correctPin) return null
 
-  const token = generateToken()
-  validTokens.set(token, Date.now() + TOKEN_EXPIRY_MS)
-  return token
+  // Create HMAC-signed token: expiry.signature (no server state needed)
+  const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
+  const signature = createHmac('sha256', SECRET).update(`${correctPin}:${expiry}`).digest('hex')
+  return `${expiry}.${signature}`
 }
 
 export function validateToken(token: string | undefined | null): boolean {
   if (!token) return false
-  const expiry = validTokens.get(token)
-  if (!expiry) return false
-  if (Date.now() > expiry) {
-    validTokens.delete(token)
-    return false
-  }
-  return true
+  const parts = token.split('.')
+  if (parts.length !== 2) return false
+
+  const [expiryStr, signature] = parts
+  const expiry = parseInt(expiryStr, 10)
+  if (isNaN(expiry) || Date.now() > expiry) return false
+
+  // Verify signature matches
+  const correctPin = process.env.COCKPIT_PIN || '0000'
+  const expected = createHmac('sha256', SECRET).update(`${correctPin}:${expiry}`).digest('hex')
+  return signature === expected
 }
 
 export async function getAuthToken(): Promise<string | null> {
