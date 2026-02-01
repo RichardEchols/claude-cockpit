@@ -4,6 +4,7 @@ import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { SpeakButton } from './SpeakButton'
 import {
   User, Bot, FileEdit, Terminal, Search, Globe,
   FileText, Loader2, CheckCircle2, XCircle, ChevronDown
@@ -169,10 +170,15 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
           )}
         </div>
 
-        {/* Timestamp */}
-        <span className="text-[11px] text-txt-quaternary px-1">
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
+        {/* Footer: Timestamp + SpeakButton */}
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-[11px] text-txt-quaternary">
+            {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          {!isUser && message.content && !message.isStreaming && (
+            <SpeakButton text={message.content} />
+          )}
+        </div>
       </div>
     </motion.div>
   )

@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Claude Cockpit',
-  description: 'Personal AI development cockpit powered by Claude Code',
+  title: 'Kiyomi Cockpit',
+  description: 'Personal AI development cockpit powered by Kiyomi',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

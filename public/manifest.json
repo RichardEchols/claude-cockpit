@@ -1,7 +1,7 @@
 {
-  "name": "Claude Cockpit",
-  "short_name": "Cockpit",
-  "description": "Personal AI development cockpit powered by Claude Code",
+  "name": "Kiyomi Cockpit",
+  "short_name": "Kiyomi",
+  "description": "Personal AI development cockpit powered by Kiyomi",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

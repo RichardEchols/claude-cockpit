@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Menu, LogOut, Terminal, X } from 'lucide-react'
+import { Menu, LogOut, Terminal, X, LayoutGrid, Volume2, VolumeX } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChatView } from './ChatView'
 import { TerminalView } from './TerminalView'
 import { ProjectSwitcher } from './ProjectSwitcher'
 import { SessionSidebar } from './SessionSidebar'
+import DashboardPanel from './DashboardPanel'
+import { FirstRunTutorial } from './FirstRunTutorial'
 import { useChat, useSessions } from '@/lib/hooks'
 import { PROJECTS } from '@/lib/constants'
+import { getVertical } from '@/lib/verticals'
 import type { Session } from '@/lib/types'
 
 interface DashboardProps {
@@ -30,7 +33,43 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const { sessions, saveSession, deleteSession } = useSessions()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
+  const [dashboardOpen, setDashboardOpen] = useState(true)
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [voiceMode, setVoiceMode] = useState(false)
+  const [currentVertical, setCurrentVertical] = useState(() => getVertical('custom'))
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    setVoiceMode(localStorage.getItem('kiyomi_voice_mode') === 'true')
+  }, [])
+
+  const toggleVoiceMode = useCallback(() => {
+    setVoiceMode(prev => {
+      const newValue = !prev
+      localStorage.setItem('kiyomi_voice_mode', String(newValue))
+      if (!newValue) window.speechSynthesis.cancel()
+      return newValue
+    })
+  }, [])
+
+  // Hide dashboard by default on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setDashboardOpen(false)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Check for first-run tutorial
+  useEffect(() => {
+    if (!localStorage.getItem('kiyomi_tutorial_complete')) {
+      setShowTutorial(true)
+    }
+  }, [])
 
   // Debounced session auto-save
   useEffect(() => {
@@ -94,6 +133,9 @@ export function Dashboard({ onLogout }: DashboardProps) {
             >
               <Menu className="w-4.5 h-4.5 text-txt-secondary" />
             </button>
+            <span className="text-[15px] font-semibold text-txt-primary truncate">
+              ✨ Kiyomi — {currentVertical.name}
+            </span>
             <ProjectSwitcher
               projects={PROJECTS}
               selected={currentProject}
@@ -102,6 +144,28 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setDashboardOpen(prev => !prev)}
+              className={`
+                w-8 h-8 rounded-lg flex items-center justify-center
+                transition-colors duration-150
+                ${dashboardOpen ? 'bg-accent/20 text-accent' : 'hover:bg-surface-tertiary text-txt-tertiary'}
+              `}
+              title="Toggle Dashboard"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={toggleVoiceMode}
+              className={`
+                w-8 h-8 rounded-lg flex items-center justify-center
+                transition-colors duration-150
+                ${voiceMode ? 'bg-accent/20 text-accent' : 'hover:bg-surface-tertiary text-txt-tertiary'}
+              `}
+              title={voiceMode ? 'Disable Voice Mode' : 'Enable Voice Mode'}
+            >
+              {voiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
             <button
               onClick={() => setTerminalOpen(true)}
               className={`
@@ -127,16 +191,37 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </header>
 
-        {/* Chat is always the primary view */}
-        <main className="flex-1 min-h-0 relative">
-          <ChatView
-            messages={messages}
-            isStreaming={isStreaming}
-            onSend={sendMessage}
-            onStop={stopStreaming}
+        {/* Split panel: Chat (left) + Dashboard (right) */}
+        <main className="flex-1 min-h-0 flex flex-row">
+          {/* Chat panel — always visible */}
+          <div className="flex-1 min-w-0 relative">
+            <ChatView
+              messages={messages}
+              isStreaming={isStreaming}
+              onSend={sendMessage}
+              onStop={stopStreaming}
+              voiceMode={voiceMode}
+            />
+          </div>
+
+          {/* Dashboard panel — collapsible right side */}
+          <DashboardPanel
+            vertical={currentVertical}
+            onAction={sendMessage}
+            isOpen={dashboardOpen}
           />
         </main>
       </div>
+
+      {/* First-run tutorial overlay */}
+      <AnimatePresence>
+        {showTutorial && (
+          <FirstRunTutorial
+            onComplete={() => setShowTutorial(false)}
+            onSendMessage={sendMessage}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Terminal sheet overlay */}
       <AnimatePresence>

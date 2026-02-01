@@ -68,7 +68,7 @@ export function AuthGate({ onAuth }: AuthGateProps) {
         </div>
 
         <div className="text-center">
-          <h1 className="text-[22px] font-bold tracking-tight">Claude Cockpit</h1>
+          <h1 className="text-[22px] font-bold tracking-tight">Kiyomi Cockpit</h1>
           <p className="text-[15px] text-txt-tertiary mt-2">Enter your PIN to continue</p>
         </div>
 

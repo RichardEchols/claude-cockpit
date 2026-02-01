@@ -90,7 +90,8 @@ async function main() {
   wss.on('connection', async (ws) => {
     activeConnections++
     let ptyProcess = null
-    let projectPath = '/Users/richardechols/Apps'
+    const homeDir = process.env.HOME || '/Users/richardecholsai'
+    let projectPath = `${homeDir}/Apps`
 
     // Ping/pong for connection health
     const pingInterval = setInterval(() => {
@@ -109,7 +110,7 @@ async function main() {
           const ptyModule = await import('node-pty')
           const pty = ptyModule.default || ptyModule
 
-          ptyProcess = pty.spawn('/Users/richardechols/.local/bin/claude', ['--dangerously-skip-permissions'], {
+          ptyProcess = pty.spawn(`${homeDir}/.local/bin/claude`, ['--dangerously-skip-permissions'], {
             name: 'xterm-256color',
             cols: msg.cols || 80,
             rows: msg.rows || 24,
@@ -118,7 +119,7 @@ async function main() {
               ...process.env,
               TERM: 'xterm-256color',
               COLORTERM: 'truecolor',
-              PATH: process.env.PATH + ':/Users/richardechols/.local/bin:/opt/homebrew/bin:/usr/local/bin',
+              PATH: process.env.PATH + `:${homeDir}/.local/bin:/opt/homebrew/bin:/usr/local/bin`,
             },
           })
 
@@ -172,7 +173,7 @@ async function main() {
   })
 
   server.listen(port, hostname, () => {
-    console.log(`\n  Claude Cockpit running at http://${hostname}:${port}`)
+    console.log(`\n  Kiyomi Cockpit running at http://${hostname}:${port}`)
     console.log(`  Terminal WebSocket at ws://${hostname}:${port}/ws/terminal`)
     console.log(`  PIN: ${process.env.COCKPIT_PIN || '0000'}`)
     console.log(`  Press Ctrl+C to stop\n`)

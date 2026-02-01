@@ -1,12 +1,18 @@
 {
-  "name": "claude-cockpit",
+  "name": "kiyomi-cockpit",
   "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "node server.mjs",
     "build": "next build",
     "start": "NODE_ENV=production node server.mjs",
-    "go": "bash start.sh"
+    "go": "bash start.sh",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3333 && electron .\"",
+    "electron:rebuild": "electron-rebuild -f -w node-pty",
+    "electron:build": "npm run build && npm run electron:rebuild && electron-builder",
+    "electron:pack": "npm run build && electron-builder --dir",
+    "postinstall": "electron-rebuild -f -w node-pty || true"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.0",
@@ -25,13 +31,56 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/ws": "^8.5.0",
     "autoprefixer": "^10.4.0",
+    "canvas": "^3.2.1",
+    "concurrently": "^9.2.1",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.7.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.kiyomi.cockpit",
+    "productName": "Kiyomi",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icon.icns"
+    },
+    "dmg": {
+      "title": "Kiyomi",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "files": [
+      "electron/**/*",
+      ".next/**/*",
+      "public/**/*",
+      "server.mjs",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    }
   }
 }

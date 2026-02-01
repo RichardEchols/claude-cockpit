@@ -14,15 +14,48 @@ interface ChatViewProps {
   isStreaming: boolean
   onSend: (content: string, files?: File[]) => void
   onStop: () => void
+  voiceMode?: boolean
 }
 
-export function ChatView({ messages, isStreaming, onSend, onStop }: ChatViewProps) {
+export function ChatView({ messages, isStreaming, onSend, onStop, voiceMode }: ChatViewProps) {
   const [input, setInput] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [showScrollDown, setShowScrollDown] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const isAtBottomRef = useRef(true)
+  const lastSpokenMessageIdRef = useRef<string | null>(null)
+
+  // Auto-speak effect
+  useEffect(() => {
+    if (!voiceMode || messages.length === 0) return
+
+    const lastMsg = messages[messages.length - 1]
+    
+    // Only speak assistant messages that are done streaming and haven't been spoken
+    if (
+      lastMsg.role === 'assistant' && 
+      !lastMsg.isStreaming && 
+      lastMsg.content && 
+      lastMsg.id !== lastSpokenMessageIdRef.current
+    ) {
+      // Clean text and speak
+      const cleanText = lastMsg.content
+        .replace(/[*#`_\[\]]/g, '')
+        .replace(/\n/g, '. ')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+      if (cleanText) {
+        // Cancel any previous speech
+        window.speechSynthesis.cancel()
+        
+        const utterance = new SpeechSynthesisUtterance(cleanText)
+        window.speechSynthesis.speak(utterance)
+        lastSpokenMessageIdRef.current = lastMsg.id
+      }
+    }
+  }, [messages, voiceMode])
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -78,7 +111,7 @@ export function ChatView({ messages, isStreaming, onSend, onStop }: ChatViewProp
               <span className="text-3xl">C</span>
             </div>
             <div className="text-center max-w-sm">
-              <h2 className="text-[20px] font-semibold mb-2">Claude Cockpit</h2>
+              <h2 className="text-[20px] font-semibold mb-2">Kiyomi Cockpit</h2>
               <p className="text-[15px] text-txt-tertiary leading-relaxed">
                 Your personal AI development interface. Send a message, use a quick action, or start with voice.
               </p>
@@ -125,7 +158,7 @@ export function ChatView({ messages, isStreaming, onSend, onStop }: ChatViewProp
       )}
 
       {/* Input area */}
-      <div className="relative px-4 pb-4 safe-bottom">
+      <div data-tutorial="chat-input" className="relative px-4 pb-4 safe-bottom">
         <div className="
           max-w-3xl mx-auto
           bg-surface-secondary border border-separator

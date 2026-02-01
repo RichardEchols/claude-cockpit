@@ -1,0 +1,3 @@
+PLACEHOLDER: Replace this with a real 512x512 PNG icon for the Kiyomi app.
+Use `sips` or an image editor to create a proper .icns from a 512x512 PNG:
+  sips -s format icns icon.png --out icon.icns
