@@ -54,10 +54,11 @@
       "target": [
         "dmg"
       ],
-      "icon": "public/icon.icns"
+      "icon": "build/icon.icns"
     },
     "dmg": {
       "title": "Kiyomi",
+      "icon": "build/icon.icns",
       "contents": [
         {
           "x": 130,
