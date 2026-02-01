@@ -58,10 +58,24 @@ export function useChat() {
         method: 'POST',
         body: formData,
         signal: abortRef.current.signal,
+        credentials: 'include',
       })
 
       if (response.status === 401) {
-        window.location.reload()
+        // Don't reload — show error in chat instead
+        setMessages(prev => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last && last.id === assistantId) {
+            updated[updated.length - 1] = {
+              ...last,
+              isStreaming: false,
+              content: 'Session expired. Please refresh the page and re-enter your PIN.',
+            }
+          }
+          return updated
+        })
+        setIsStreaming(false)
         return
       }
 
@@ -249,22 +263,57 @@ export function useSessions() {
   return { sessions, saveSession, deleteSession }
 }
 
+function getCachedAuth(): { authenticated: boolean; timestamp: number } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const cached = localStorage.getItem('cockpit-auth')
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      const sevenDays = 7 * 24 * 60 * 60 * 1000
+      if (parsed.authenticated && Date.now() - parsed.timestamp < sevenDays) {
+        return parsed
+      }
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function setCachedAuth(authenticated: boolean) {
+  try {
+    if (authenticated) {
+      localStorage.setItem('cockpit-auth', JSON.stringify({
+        authenticated: true,
+        timestamp: Date.now(),
+      }))
+    } else {
+      localStorage.removeItem('cockpit-auth')
+    }
+  } catch { /* ignore */ }
+}
+
 export function useAuth() {
-  const [authenticated, setAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const cached = getCachedAuth()
+  const [authenticated, setAuthenticated] = useState(cached?.authenticated ?? false)
+  const [loading, setLoading] = useState(!cached?.authenticated)
 
   useEffect(() => {
-    // Check if we have a valid auth cookie by hitting a protected endpoint
-    fetch('/api/projects')
+    // Verify auth in background — if cached, we already show authenticated
+    fetch('/api/projects', { credentials: 'include' })
       .then(res => {
         setAuthenticated(res.ok)
+        setCachedAuth(res.ok)
         setLoading(false)
       })
       .catch(() => {
-        setAuthenticated(false)
+        // Network error — don't un-authenticate if we had cached auth
+        // (server might be temporarily unreachable)
+        if (!cached?.authenticated) {
+          setAuthenticated(false)
+          setCachedAuth(false)
+        }
         setLoading(false)
       })
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(async (pin: string): Promise<boolean> => {
     try {
@@ -272,9 +321,11 @@ export function useAuth() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin }),
+        credentials: 'include',
       })
       if (res.ok) {
         setAuthenticated(true)
+        setCachedAuth(true)
         return true
       }
       return false
@@ -284,9 +335,9 @@ export function useAuth() {
   }, [])
 
   const logout = useCallback(() => {
-    // Clear the auth cookie
     document.cookie = 'cockpit-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     setAuthenticated(false)
+    setCachedAuth(false)
   }, [])
 
   return { authenticated, loading, login, logout }
