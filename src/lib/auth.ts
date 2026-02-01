@@ -41,7 +41,9 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 export function validateProjectPath(path: string): boolean {
-  return PROJECTS.some(p => path === p.path || path.startsWith(p.path + '/'))
+  const home = process.env.HOME || '/Users'
+  // Allow any path under home directory, or any path in PROJECTS
+  return path.startsWith(home) || path.startsWith('/tmp') || PROJECTS.some(p => path === p.path || path.startsWith(p.path + '/'))
 }
 
 export function sanitizeFilename(filename: string): string {

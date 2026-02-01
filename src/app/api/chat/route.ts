@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const message = formData.get('message')
-    const projectPath = formData.get('projectPath') as string || `${process.env.HOME || '/Users/richardecholsai'}/Apps`
+    const projectPath = formData.get('projectPath') as string || process.env.HOME || '/tmp'
     const sessionId = formData.get('sessionId') as string | null
 
     if (!message || typeof message !== 'string' || !message.trim()) {
